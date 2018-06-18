@@ -1,0 +1,181 @@
+---
+title: "UDAND - TEST A PERCEPTUAL PHENOMENON"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_notebook: default
+  html_document: default
+---
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+library(ggplot2)
+library(gridExtra)
+library(tidyr)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, load_data}
+stroop <- read.csv("~/python/UDAND/Inferential Statistics/stroop.csv")
+```
+
+
+###1. What is our independent variable? What is our dependent variable?
+The independent variable is the congruency of the words to the color of the ink it's printed with. 
+
+The dependent variable is the time it takes for a person to name the color of that ink.
+
+###2a. What is an appropriate set of hypotheses for this task?
+This dataset is fairly small, giving the results of only 24 participants performing the 2 tasks in the Stroop test. We will use this *sample data* to calculate a statistically strong inference about the *population data*.
+
+**The null hypothesis (H~0~): **
+
+*There is no difference* between the time taken by the population to name the ink color of a word, whether is congruent (µ~C~) or incongruent (µ~IC~).
+
+$H_{0}: \mu_{IC} - \mu_{C}  = 0$
+
+**The alternative hypothesis (H~A~):**
+
+*There is a difference* between the time taken by the population to name the ink color of a word, whether it is congruent (µ~C~) or incongruent (µ~IC~).
+
+$H_{A}: \mu_{IC} - \mu_{C} \neq 0$
+
+These hypotheses were chosen because the independent variable (word congruency to ink color) is alleged to directly affect the dependent variable (length of time to name the ink color). 
+
+###2a. What kind of statistical test do you expect to perform?
+
+Z-Tests compare population means to sample means, and work best with large sample sizes (n > 30). Since we do not have a large sample size (24) and do not know the standard deviation of our dataset, Z-Tests are not appropriate.
+
+T-Tests, in contrast, are used to determine whether there is a statistically significant difference between sample groups, and work best with limited sample sizes (n < 30).
+
+Thus, since the Stroop data sample size is *limited*, and we *do not* know the population data, we expect to perform a *T-Test with a 0.05 significance level*. Since are calculating the difference in time between paired observations (where the same participant performs both conditions), this will be a *paired (or dependent) T-Test*. 
+
+The T-Test is *two-tailed* because our alternative hypothesis only expects *any* change in $H_A$, not a specific direction.
+
+Performing the Stroop test myself, I came up with the following results:
+
+* Congruent: 8.979 seconds
+* Incongruent: 18.502 seconds
+
+###3. Report some descriptive statistics regarding this dataset. Include at least one measure of central tendency and at least one measure of variability.
+```{r echo=FALSE, message=FALSE, warning=FALSE, summary}
+stroop$condition_diff <- with(stroop, Incongruent - Congruent) #create diff column
+
+stroop_long <- gather(stroop, Condition, Time, Congruent:Incongruent)
+
+sd(stroop$condition_diff)
+
+summary(stroop)
+```
+
+This dataset is fairly small, with 24 samples in total.
+
+Congruent times are faster than Incongruent times, with the following stats:
+
+- $median = 14.36$ seconds
+- $\bar{x}_{C} = 14.05$ seconds
+- $\sigma_{\bar{x}_{C}} = 3.56$ seconds
+
+Incongruent times are have a mean of 22.02 seconds and standard deviation of 4.79. 
+
+- $median = 21.02$ seconds
+- $\bar{x}_{IC} = 22.02$ seconds
+- $\sigma_{\bar{x}_{IC}} = 4.79$ seconds
+
+The difference in these times was calculated, revealing the following stats:
+
+- $median = 7.67$ seconds
+- $\bar{x}_{IC} = 7.97$ seconds
+- $\sigma_{\bar{x}_{IC}} = 4.86$ seconds
+
+All these times are fairly normally distributed, with the means and medians being in very close proximity to each other.
+
+###4. Provide one or two visualizations that show the distribution of the sample data. Write one or two sentences noting what you observe about the plot or plots.
+
+``` {r echo=FALSE, plot_c}
+ggplot(aes(x = Condition, y = Time), data = stroop_long) +
+  geom_boxplot(fill = "steel blue") +
+  labs(title = "Conditional Observations", y = "Time (in seconds)")
+```
+ 
+Here we can see the distributions of the observations in seconds. Both conditions are distributed fairly similarly, but there is a clearly higher time values for the Incongruent condition compared to Congruent. Furthermore, there are a few outliers in the Incongruent condition.
+
+###5. Now, perform the statistical test and report your results. What is your confidence level and your critical statistic value? Do you reject the null hypothesis or fail to reject it? Come to a conclusion in terms of the experiment task. Did the results match up with your expectations?
+
+
+$\alpha: .005$
+
+The degrees of freedom is calculated as sample total - 1, which gives: 
+
+$df: n - 1 = 23$
+
+Thus, using a t table, we find the following t-critical value:
+
+$t_{0.05}: 2.069$
+
+Rejection region: $\pm 2.069$ 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, stat_calc}
+stroop$condition_diff_var <- with(stroop, (condition_diff - mean(condition_diff))^2)
+#create squared variance column
+t_crit <- 2.069
+n <- length(stroop$condition_diff)
+df <- n - 1
+mean_diff <- mean(stroop$condition_diff)
+sum_squares <- sum(stroop$condition_diff_var)
+var <- sum_squares / df
+se <- sqrt(var)
+sem <- se/sqrt(n)
+t_stat <- mean_diff / sem
+moe <- t_crit * sem
+cohen <- mean_diff / se
+```
+
+``` {r echo = FALSE}
+cat("T-Critical:", t_crit, "\n")
+cat("Degrees of Freedom:", df, "\n")
+cat("Mean Difference:", mean_diff, "\n")
+cat("Sum of Squares:", sum_squares, "\n")
+cat("Variance:", var, "\n")
+cat("Standard Error:", se, "\n")
+cat("Standard Error of the Mean:", sem, "\n")
+cat("T-Statistic:", t_stat, "\n")
+cat("Margin of Error:", moe, "\n")
+cat("Cohen's d:", cohen, "\n")
+```
+
+Manually calculating the statistics gives the above numbers. 
+
+Confidence Intervals is dependent on Margin of Error, thus giving:
+
+$CI: \bar{x}_d \pm 2.05$
+$CI: 5.91 - 10.01$ seconds
+
+Using the t.test r function confirms those same answers.
+
+``` {r echo=FALSE, ttest}
+t.test(stroop$Incongruent, stroop$Congruent, paired = TRUE)
+```
+
+From these numbers, we can confirm:
+
+$$Tstat: 8.02 > Tcrit_{0.05}: 2.069$$
+
+Thus, the null hypothesis can be *rejected*.
+
+Cohen's d value of 1.64 shows that there is a *very large effect* between Incongruent and Congruent times.
+ 
+###6. Optional: What do you think is responsible for the effects observed? Can you think of an alternative or similar task that would result in a similar effect? Some research about the problem will be helpful for thinking about these two questions!
+
+Reading about the Stroop effect presents some very interesting theories regarding how the human brain processes different types of data. It has been posited that reading words is easier than recognizing colors, and thus when the word is not congruent to the color, there is a conflict which increases the time taken to come to a correct answer. Thus, similar experiments and tasks could be designed which involve conflicting brain processes. 
+
+An example could be asking someone to place their hand on different objects of varying temperature and varying texture, and measuring how the length of time it takes for them to identify one of those factors. Perhaps humans generally measure temperature faster than texture, or vice versa.
+
+
+
+###Reference List
+- http://blog.minitab.com/blog/adventures-in-statistics-2/understanding-t-tests%3A-1-sample%2C-2-sample%2C-and-paired-t-tests
+- https://www.rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf
+- https://stackoverflow.com/questions/13445753/force-ggplot2-scatter-plot-to-be-square-shaped
+- https://en.wikipedia.org/wiki/Stroop_effect
+- https://study.com/academy/lesson/z-test-t-test-similarities-differences.html
+- https://rpubs.com/raquelsbf/t-tests
